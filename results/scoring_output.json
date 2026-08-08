@@ -1,0 +1,241 @@
+{
+  "baseline_val_metrics": {
+    "split_name": "val",
+    "threshold": 0.20033572868464375,
+    "pr_auc": 0.3766713268072712,
+    "precision": 0.355294949614002,
+    "recall": 0.9930818646022073,
+    "fpr": 0.8231133849973666,
+    "confusion_matrix": [
+      [
+        4702,
+        21880
+      ],
+      [
+        84,
+        12058
+      ]
+    ],
+    "false_alerts_per_10k_benign": 8231.133849973667,
+    "per_class": {
+      "light": {
+        "pr_auc": 0.05891754235641221,
+        "precision": 0.05351040359908293,
+        "recall": 0.993574297188755,
+        "fpr": 0.8231133849973666
+      },
+      "heavy": {
+        "pr_auc": 0.35163844103281083,
+        "precision": 0.330907311703006,
+        "recall": 0.9930256033770762,
+        "fpr": 0.8231133849973666
+      },
+      "combined": {
+        "pr_auc": 0.3766713268072712,
+        "precision": 0.355294949614002,
+        "recall": 0.9930818646022073,
+        "fpr": 0.8231133849973666
+      }
+    }
+  },
+  "baseline_test_metrics": {
+    "split_name": "test",
+    "threshold": 0.20033572868464375,
+    "pr_auc": 0.4281675253916398,
+    "precision": 0.40466212676794133,
+    "recall": 0.9921108155215118,
+    "fpr": 0.8093082400813835,
+    "confusion_matrix": [
+      [
+        3749,
+        15911
+      ],
+      [
+        86,
+        10815
+      ]
+    ],
+    "false_alerts_per_10k_benign": 8093.082400813834,
+    "per_class": {
+      "light": {
+        "pr_auc": 0.0596944123303203,
+        "precision": 0.054267712791250595,
+        "recall": 0.991313789359392,
+        "fpr": 0.8093082400813835
+      },
+      "heavy": {
+        "pr_auc": 0.40688644645471267,
+        "precision": 0.38360516019060165,
+        "recall": 0.992184368737475,
+        "fpr": 0.8093082400813835
+      },
+      "combined": {
+        "pr_auc": 0.4281675253916398,
+        "precision": 0.40466212676794133,
+        "recall": 0.9921108155215118,
+        "fpr": 0.8093082400813835
+      }
+    }
+  },
+  "model_val_metrics": {
+    "split_name": "val",
+    "threshold": 0.17873072624206543,
+    "pr_auc": 0.8069274342900903,
+    "precision": 0.7963684384285242,
+    "recall": 0.9933289408664141,
+    "fpr": 0.11601835828756302,
+    "confusion_matrix": [
+      [
+        23498,
+        3084
+      ],
+      [
+        81,
+        12061
+      ]
+    ],
+    "false_alerts_per_10k_benign": 1160.1835828756302,
+    "per_class": {
+      "light": {
+        "pr_auc": 0.2983159984305053,
+        "precision": 0.2874306839186691,
+        "recall": 0.9991967871485944,
+        "fpr": 0.11601835828756302
+      },
+      "heavy": {
+        "pr_auc": 0.7899439370083897,
+        "precision": 0.7781454571613553,
+        "recall": 0.9926585298706065,
+        "fpr": 0.11601835828756302
+      },
+      "combined": {
+        "pr_auc": 0.8069274342900903,
+        "precision": 0.7963684384285242,
+        "recall": 0.9933289408664141,
+        "fpr": 0.11601835828756302
+      }
+    }
+  },
+  "model_test_metrics": {
+    "split_name": "test",
+    "threshold": 0.17873072624206543,
+    "pr_auc": 0.8094117838585149,
+    "precision": 0.8228528187665531,
+    "recall": 0.9975231630125676,
+    "fpr": 0.11907426246185147,
+    "confusion_matrix": [
+      [
+        17319,
+        2341
+      ],
+      [
+        27,
+        10874
+      ]
+    ],
+    "false_alerts_per_10k_benign": 1190.7426246185148,
+    "per_class": {
+      "light": {
+        "pr_auc": 0.28440177922282645,
+        "precision": 0.28190184049079753,
+        "recall": 0.997828447339848,
+        "fpr": 0.11907426246185147
+      },
+      "heavy": {
+        "pr_auc": 0.7940676981952378,
+        "precision": 0.8096128822381262,
+        "recall": 0.9974949899799599,
+        "fpr": 0.11907426246185147
+      },
+      "combined": {
+        "pr_auc": 0.8094117838585149,
+        "precision": 0.8228528187665531,
+        "recall": 0.9975231630125676,
+        "fpr": 0.11907426246185147
+      }
+    }
+  },
+  "threshold_selection": {
+    "baseline_threshold_selected_on_val": 0.20033572868464375,
+    "model_threshold_selected_on_val": 0.17873072624206543,
+    "method": "F1-maximizing threshold over the validation precision-recall curve (src/model.py:select_threshold)"
+  },
+  "latency": {
+    "median_latency_ms_per_row": 0.6736000068485737,
+    "p95_latency_ms_per_row": 0.7961950075696221,
+    "n_rows_timed_individually": 500,
+    "n_rows_total_test": 30561,
+    "note": "Per-row timings exclude feature extraction (CSV load + impute/scale), which is measured and reported separately in the technical report.",
+    "hardware": "Windows-10-10.0.21996-SP0",
+    "python_version": "3.13.5",
+    "sklearn_version": "1.7.1"
+  },
+  "model_config": {
+    "model_name": "xgboost",
+    "feature_columns": [
+      "rr",
+      "A_frequency",
+      "NS_frequency",
+      "CNAME_frequency",
+      "SOA_frequency",
+      "NULL_frequency",
+      "PTR_frequency",
+      "HINFO_frequency",
+      "MX_frequency",
+      "TXT_frequency",
+      "AAAA_frequency",
+      "SRV_frequency",
+      "OPT_frequency",
+      "rr_count",
+      "rr_name_entropy",
+      "rr_name_length",
+      "distinct_ns",
+      "a_records",
+      "ttl_mean",
+      "ttl_variance",
+      "FQDN_count",
+      "subdomain_length",
+      "upper",
+      "lower",
+      "numeric",
+      "entropy",
+      "special",
+      "labels",
+      "labels_max",
+      "labels_average",
+      "len",
+      "rr_scaled",
+      "A_frequency_scaled",
+      "NS_frequency_scaled",
+      "CNAME_frequency_scaled",
+      "SOA_frequency_scaled",
+      "NULL_frequency_scaled",
+      "PTR_frequency_scaled",
+      "HINFO_frequency_scaled",
+      "MX_frequency_scaled",
+      "TXT_frequency_scaled",
+      "AAAA_frequency_scaled",
+      "SRV_frequency_scaled",
+      "OPT_frequency_scaled",
+      "rr_count_scaled",
+      "rr_name_entropy_scaled",
+      "rr_name_length_scaled",
+      "distinct_ns_scaled",
+      "a_records_scaled",
+      "ttl_mean_scaled",
+      "ttl_variance_scaled",
+      "FQDN_count_scaled",
+      "subdomain_length_scaled",
+      "upper_scaled",
+      "lower_scaled",
+      "numeric_scaled",
+      "entropy_scaled",
+      "special_scaled",
+      "labels_scaled",
+      "labels_max_scaled",
+      "labels_average_scaled",
+      "len_scaled"
+    ]
+  },
+  "split_methodology": "File-group (proxy session) level split, stratified by label_detail; see results/group_split_manifest.csv for the full group->split assignment."
+}
