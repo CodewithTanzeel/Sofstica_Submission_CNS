@@ -1,4 +1,9 @@
-pandas
-numpy
-scikit-learn
-pytest
+# Pin these to whatever you actually have installed and tested with, e.g.
+# run `pip freeze | grep -iE "pandas|numpy|scikit-learn|xgboost|pytest"`
+# on your machine and paste the exact versions here before final submission.
+# Versions below are known-good minimums verified against this pipeline.
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+xgboost>=2.0
+pytest>=7.4

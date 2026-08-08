@@ -9,7 +9,15 @@ from sklearn.preprocessing import StandardScaler
 
 def prepare_features(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     """Simple feature preparation that fits on train only."""
-    excluded_columns = {"row_id", "capture_id", "session_id", "collection_day", "registrable_domain", "split", "label", "label_detail", "source_file"}
+    # sld/subdomain/timestamp are explicit domain-leakage / shortcut fields per
+    # the brief (raw domain identity and capture timestamps are not valid
+    # predictive evidence) — excluded deliberately, not as a side effect of
+    # dtype filtering.
+    excluded_columns = {
+        "row_id", "capture_id", "session_id", "collection_day", "registrable_domain",
+        "split", "label", "label_detail", "source_file",
+        "sld", "subdomain", "timestamp",
+    }
     feature_columns = [col for col in train.columns if col not in excluded_columns and pd.api.types.is_numeric_dtype(train[col])]
 
     imputer = SimpleImputer(strategy="median")

@@ -26,13 +26,41 @@ def load_split(manifest: pd.DataFrame, feature_table: pd.DataFrame) -> Dict[str,
 
 
 def _infer_label_from_path(path: Path, dataset_root: Path) -> int:
+    """Infer label_detail (0=benign, 1=light attack, 2=heavy attack) from folder structure.
+
+    CRITICAL: the immediate parent directory ("Attacks" vs "Benign") is the
+    authoritative signal, NOT the top-level campaign folder name. A naive
+    substring check on the full joined path (the previous implementation)
+    mislabels every file under Attack_Light_Benign/Benign/* and
+    Attack_heavy_Benign/Benign/* as an attack, because the campaign folder
+    name itself contains "attack_light_benign" / "attack_heavy_benign" even
+    though the file lives in the Benign/ subfolder. That bug silently
+    flipped ~91.8k genuinely benign rows to attack-labeled rows.
+    """
     relative_parts = [part.lower() for part in path.relative_to(dataset_root).parts]
-    relative_str = "-".join(relative_parts)
-    if "attack_light_benign" in relative_str or ("attack" in relative_str and "light" in relative_str):
-        return 1
-    if "attack_heavy_benign" in relative_str or ("attack" in relative_str and "heavy" in relative_str):
+    if len(relative_parts) < 2:
+        raise ValueError(f"Cannot infer label, path too shallow: {path}")
+
+    parent_dir = relative_parts[-2]
+    top_dir = relative_parts[0]
+
+    if parent_dir == "benign":
+        return 0
+    if parent_dir == "attacks":
+        if "heavy" in top_dir:
+            return 2
+        if "light" in top_dir:
+            return 1
+        raise ValueError(f"Attacks folder with unrecognized campaign: {path}")
+
+    # Fallback for flat layouts without an Attacks/Benign subfolder.
+    if top_dir == "benign":
+        return 0
+    if "heavy" in top_dir:
         return 2
-    return 0
+    if "light" in top_dir:
+        return 1
+    raise ValueError(f"Cannot infer label for path: {path}")
 
 
 def _normalize_feature_key(path: Path) -> str:
@@ -44,8 +72,25 @@ def _normalize_feature_key(path: Path) -> str:
     return name.replace(".pcap.csv", "").replace(".csv", "").lstrip("_")
 
 
-def load_kaggle_dataset(dataset_dir: str | Path) -> Dict[str, pd.DataFrame]:
-    """Load the Kaggle-style folder structure into train/val/test splits."""
+def load_kaggle_dataset(dataset_dir: str | Path, random_state: int = 42) -> Dict[str, pd.DataFrame]:
+    """Load the Kaggle-style folder structure into train/val/test splits.
+
+    IMPORTANT — split methodology:
+    The organizer brief prohibits random row-level splits and requires
+    grouping by exfiltration session (and controlling domain leakage). The
+    raw CIC-Bell-DNS-EXF-2021 snapshot distributed here does NOT include
+    session_id / registrable_domain / collection_day columns — each CSV file
+    IS the unit of capture (one file = one exfiltration-session / benign
+    capture). We therefore treat each paired (stateful+stateless) file group
+    as a single "session" and split at the FILE-GROUP level: every row from
+    a given file stays together in exactly one of train/val/test. This is
+    documented in the technical report as a proxy for the organizer's true
+    session/day manifest, which was not distributed with this snapshot.
+
+    The split is stratified by label_detail (0=benign, 1=light, 2=heavy) so
+    every partition contains benign, light-attack, and heavy-attack file
+    groups, which the brief's required per-class metrics depend on.
+    """
     dataset_dir = Path(dataset_dir)
     if not dataset_dir.exists():
         raise FileNotFoundError(f"Dataset directory not found: {dataset_dir}")
@@ -66,7 +111,8 @@ def load_kaggle_dataset(dataset_dir: str | Path) -> Dict[str, pd.DataFrame]:
             feature_type = "single"
         grouped_files.setdefault(_normalize_feature_key(csv_path), {})[feature_type] = csv_path
 
-    frames: List[pd.DataFrame] = []
+    groups: Dict[str, pd.DataFrame] = {}
+    group_label: Dict[str, int] = {}
     for key, feature_files in grouped_files.items():
         stateful_path = feature_files.get("stateful")
         stateless_path = feature_files.get("stateless")
@@ -87,32 +133,75 @@ def load_kaggle_dataset(dataset_dir: str | Path) -> Dict[str, pd.DataFrame]:
         else:
             continue
 
-        combined["label_detail"] = _infer_label_from_path(source_path, dataset_dir)
-        combined["label"] = combined["label_detail"].apply(lambda value: 0 if value == 0 else 1)
+        label_detail = _infer_label_from_path(source_path, dataset_dir)
+        combined["label_detail"] = label_detail
+        combined["label"] = 0 if label_detail == 0 else 1
         combined["source_file"] = source_path.name
-        frames.append(combined)
+        # Session/domain proxy required by src/leakage.py and the brief's
+        # group-integrity rule. Real session_id / registrable_domain columns
+        # do not exist in this snapshot, so the file-group key stands in for
+        # both, guaranteeing (by construction of the split below) that no
+        # "session" or "domain" ever crosses a train/val/test boundary.
+        combined["session_id"] = key
+        combined["registrable_domain"] = key
+        combined["collection_day"] = "unknown"  # not available in this snapshot; documented limitation
 
-    if not frames:
+        groups[key] = combined
+        group_label[key] = label_detail
+
+    if not groups:
         raise ValueError(f"No compatible feature file pairs found under {dataset_dir}")
+
+    # Stratified group split: for each label_detail class, shuffle its file
+    # groups deterministically and slice ~70/15/15, keeping at least one
+    # group in val/test whenever the class has multiple groups. No row from
+    # any given file ever appears in more than one partition.
+    rng = __import__("numpy").random.RandomState(random_state)
+    split_of_group: Dict[str, str] = {}
+    for label_value in sorted(set(group_label.values())):
+        class_keys = sorted([k for k, v in group_label.items() if v == label_value])
+        rng.shuffle(class_keys)
+        n = len(class_keys)
+        if n == 1:
+            split_of_group[class_keys[0]] = "train"
+            continue
+        n_val = max(1, round(n * 0.15))
+        n_test = max(1, round(n * 0.15))
+        n_val = min(n_val, n - 1)
+        n_test = min(n_test, n - n_val - 1) if n - n_val - 1 >= 1 else max(0, n - n_val - 1)
+        n_train = n - n_val - n_test
+        for k in class_keys[:n_train]:
+            split_of_group[k] = "train"
+        for k in class_keys[n_train:n_train + n_val]:
+            split_of_group[k] = "val"
+        for k in class_keys[n_train + n_val:]:
+            split_of_group[k] = "test"
+
+    frames: List[pd.DataFrame] = []
+    for key, frame in groups.items():
+        frame = frame.copy()
+        frame["split"] = split_of_group[key]
+        frames.append(frame)
 
     combined = pd.concat(frames, ignore_index=True)
     combined = combined.reset_index().rename(columns={"index": "row_id"})
-    combined = combined.sample(frac=1.0, random_state=42).reset_index(drop=True)
 
-    split_size = len(combined)
-    train_end = int(split_size * 0.7)
-    val_end = int(split_size * 0.85)
+    result: Dict[str, pd.DataFrame] = {}
+    for split_name in ["train", "val", "test"]:
+        subset = combined.loc[combined["split"] == split_name].copy()
+        subset = subset.sort_values("row_id").reset_index(drop=True)
+        result[split_name] = subset
 
-    train = combined.iloc[:train_end].copy()
-    val = combined.iloc[train_end:val_end].copy()
-    test = combined.iloc[val_end:].copy()
+    return result
 
-    for frame in [train, val, test]:
-        frame["split"] = "train"
-    val["split"] = "val"
-    test["split"] = "test"
 
-    return {"train": train, "val": val, "test": test}
+def group_manifest(split_frames: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Return a small file-group -> split manifest, useful for the leakage audit doc."""
+    rows = []
+    for split_name, frame in split_frames.items():
+        for key, label_detail in frame.groupby("session_id")["label_detail"].first().items():
+            rows.append({"session_id": key, "split": split_name, "label_detail": int(label_detail), "n_rows": int((frame["session_id"] == key).sum())})
+    return pd.DataFrame(rows).sort_values(["split", "session_id"]).reset_index(drop=True)
 
 
 def build_feature_matrix(frame: pd.DataFrame, excluded_fields: List[str] | None = None) -> pd.DataFrame:

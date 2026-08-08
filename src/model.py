@@ -20,7 +20,11 @@ class SimpleModel:
         self._model_name = "xgboost"
 
     def fit(self, frame: pd.DataFrame, y: np.ndarray) -> "SimpleModel":
-        excluded_columns = {"row_id", "capture_id", "session_id", "collection_day", "registrable_domain", "split", "label", "label_detail", "source_file"}
+        excluded_columns = {
+            "row_id", "capture_id", "session_id", "collection_day", "registrable_domain",
+            "split", "label", "label_detail", "source_file",
+            "sld", "subdomain", "timestamp",
+        }
         self._feature_columns = [col for col in frame.columns if col not in excluded_columns and pd.api.types.is_numeric_dtype(frame[col])]
         X = frame[self._feature_columns].to_numpy(dtype=float)
 
@@ -44,7 +48,11 @@ class SimpleModel:
 
     def predict_proba(self, frame: pd.DataFrame) -> np.ndarray:
         if not self._feature_columns:
-            excluded_columns = {"row_id", "capture_id", "session_id", "collection_day", "registrable_domain", "split", "label", "label_detail", "source_file"}
+            excluded_columns = {
+            "row_id", "capture_id", "session_id", "collection_day", "registrable_domain",
+            "split", "label", "label_detail", "source_file",
+            "sld", "subdomain", "timestamp",
+        }
             self._feature_columns = [col for col in frame.columns if col not in excluded_columns and pd.api.types.is_numeric_dtype(frame[col])]
         X = frame[self._feature_columns].to_numpy(dtype=float)
         return self._primary_model.predict_proba(X)[:, 1]
