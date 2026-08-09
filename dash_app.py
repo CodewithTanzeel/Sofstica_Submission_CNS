@@ -27,9 +27,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, State, dcc, html, dash_table
-
+from dash import Dash
 from src.score_new import load_bundle, score_dataframe
 
+app = Dash(__name__)
+# … your existing layout / callbacks …
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8050))   # Render will set PORT
+    app.run_server(host="0.0.0.0", port=port, debug=False)
+  
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 LABEL_NAMES = {0: "BENIGN", 1: "LIGHT ATTACK", 2: "HEAVY ATTACK"}
