@@ -30,11 +30,7 @@ from dash import Input, Output, State, dcc, html, dash_table
 from dash import Dash
 from src.score_new import load_bundle, score_dataframe
 
-app = Dash(__name__)
-# … your existing layout / callbacks …
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8050))   # Render will set PORT
-    app.run_server(host="0.0.0.0", port=port, debug=False)
+
   
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
@@ -64,8 +60,9 @@ app = dash.Dash(
     external_stylesheets=[dbc.themes.CYBORG],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
-server = app.server  # gunicorn entrypoint: dash_app:server
-app.config.suppress_callback_exceptions = True  # download-btn is created dynamically inside score-output
+
+server = app.server
+app.config.suppress_callback_exceptions = True
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +310,6 @@ app.index_string = app.index_string.replace(
     </style>
     </head>""",
 )
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))

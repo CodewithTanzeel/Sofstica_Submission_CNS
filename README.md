@@ -120,7 +120,7 @@ To test it the same way a production host will run it (via gunicorn, not the dev
 gunicorn dash_app:server --bind 0.0.0.0:8050
 ```
 
-## 3. requirements.txt / Procfile
+## 3. requirements.txt / Procfile 
 
 `requirements.txt` should include, in addition to the ML dependencies:
 
