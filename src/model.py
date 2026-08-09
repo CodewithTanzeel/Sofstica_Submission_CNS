@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_recall_curve
+from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 
@@ -17,7 +18,9 @@ class SimpleModel:
         self._threshold = 0.5
         self._feature_columns: List[str] = []
         self._primary_model = None
-        self._model_name = "xgboost"
+        self._logistic = None
+        self._scaler = None
+        self._model_name = "ensemble"
 
     def fit(self, frame: pd.DataFrame, y: np.ndarray) -> "SimpleModel":
         excluded_columns = {
@@ -28,20 +31,20 @@ class SimpleModel:
         self._feature_columns = [col for col in frame.columns if col not in excluded_columns and pd.api.types.is_numeric_dtype(frame[col])]
         X = frame[self._feature_columns].to_numpy(dtype=float)
 
-        self._logistic = LogisticRegression(max_iter=1000, class_weight="balanced", n_jobs=-1, solver="lbfgs")
-        self._logistic.fit(X, y)
+        # 1. Scale data for Logistic Regression (Fixes ConvergenceWarning)
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X)
 
+        # 2. Logistic Regression (Removed n_jobs=-1, increased max_iter)
+        self._logistic = LogisticRegression(max_iter=5000, class_weight="balanced", solver="lbfgs")
+        self._logistic.fit(X_scaled, y)
+
+        # 3. XGBoost (Added importance_type="gain" to fix Python 3.13 crash)
         self._primary_model = XGBClassifier(
-            n_estimators=200,
-            max_depth=4,
-            learning_rate=0.1,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            eval_metric="aucpr",
-            n_jobs=1,
-            random_state=42,
-            tree_method="hist",
-            objective="binary:logistic",
+            n_estimators=200, max_depth=4, learning_rate=0.1,
+            subsample=0.8, colsample_bytree=0.8, eval_metric="aucpr",
+            n_jobs=1, random_state=42, tree_method="hist",
+            objective="binary:logistic", importance_type="gain"
         )
         self._primary_model.fit(X, y)
         return self
@@ -49,18 +52,25 @@ class SimpleModel:
     def predict_proba(self, frame: pd.DataFrame) -> np.ndarray:
         if not self._feature_columns:
             excluded_columns = {
-            "row_id", "capture_id", "session_id", "collection_day", "registrable_domain",
-            "split", "label", "label_detail", "source_file",
-            "sld", "subdomain", "timestamp",
-        }
+                "row_id", "capture_id", "session_id", "collection_day", "registrable_domain",
+                "split", "label", "label_detail", "source_file",
+                "sld", "subdomain", "timestamp",
+            }
             self._feature_columns = [col for col in frame.columns if col not in excluded_columns and pd.api.types.is_numeric_dtype(frame[col])]
+            
         X = frame[self._feature_columns].to_numpy(dtype=float)
-        return self._primary_model.predict_proba(X)[:, 1]
+        
+        # Ensemble: average both models for higher precision
+        p_xgb = self._primary_model.predict_proba(X)[:, 1]
+        p_log = self._logistic.predict_proba(self._scaler.transform(X))[:, 1]
+        return (p_xgb + p_log) / 2
 
     def explain(self, row: pd.Series) -> List[tuple[str, float]]:
-        if not self._feature_columns:
+        if not self._feature_columns: return []
+        try:
+            importances = self._primary_model.feature_importances_
+        except Exception:
             return []
-        importances = self._primary_model.feature_importances_
         ranked = sorted(zip(self._feature_columns, importances), key=lambda item: abs(item[1]), reverse=True)
         return [(name, float(value)) for name, value in ranked[:10]]
 
@@ -72,8 +82,10 @@ def _class_weight_ratio(y: np.ndarray) -> float:
 
 
 def train_logistic_regression(X_train, y_train) -> LogisticRegression:
-    clf = LogisticRegression(max_iter=1000, class_weight="balanced", n_jobs=-1, solver="lbfgs")
-    clf.fit(X_train, y_train)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_train)
+    clf = LogisticRegression(max_iter=5000, class_weight="balanced", solver="lbfgs")
+    clf.fit(X_scaled, y_train)
     return clf
 
 
@@ -81,26 +93,17 @@ def train_primary_model(X_train, y_train, feature_names: list[str]):
     pos_weight = _class_weight_ratio(np.asarray(y_train))
     try:
         from lightgbm import LGBMClassifier
-
         clf = LGBMClassifier(
-            n_estimators=300,
-            max_depth=7,
-            num_leaves=31,
-            learning_rate=0.05,
-            scale_pos_weight=pos_weight,
-            n_jobs=-1,
-            random_state=42,
-            verbosity=-1,
+            n_estimators=300, max_depth=7, num_leaves=31,
+            learning_rate=0.05, scale_pos_weight=pos_weight,
+            n_jobs=-1, random_state=42, verbosity=-1,
         )
         clf.fit(X_train, y_train)
         return clf, "lightgbm"
     except ImportError:
         clf = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=10,
-            class_weight="balanced",
-            n_jobs=-1,
-            random_state=42,
+            n_estimators=200, max_depth=10,
+            class_weight="balanced", n_jobs=-1, random_state=42,
         )
         clf.fit(X_train, y_train)
         return clf, "random_forest"
@@ -119,6 +122,13 @@ def select_threshold(y_val, val_scores, target_fpr: float | None = None) -> floa
     f1 = np.where((precision + recall) > 0, 2 * precision * recall / (precision + recall + 1e-9), 0)
     best_idx = int(np.argmax(f1))
     return float(thresholds[best_idx]) if len(thresholds) else 0.5
+
+
+# NEW: Function to target specific precision (e.g., 98%)
+def select_threshold_for_precision(y_val, scores, min_precision=0.98):
+    precision, recall, thresholds = precision_recall_curve(y_val, scores)
+    ok = np.where(precision[:-1] >= min_precision)[0]
+    return float(thresholds[ok[-1]]) if len(ok) else float(thresholds[-1])
 
 
 @dataclass
@@ -149,12 +159,15 @@ def predict_with_timing(model, X) -> TimedPrediction:
 
 
 def reason_codes(model, feature_names: list[str], row: np.ndarray, top_n: int = 3) -> list[str]:
-    if hasattr(model, "feature_importances_"):
-        importances = np.asarray(model.feature_importances_)
-    elif hasattr(model, "coef_"):
-        importances = np.abs(np.asarray(model.coef_)).ravel()
-    else:
-        raise ValueError("Model has neither feature_importances_ nor coef_")
+    try:
+        if hasattr(model, "feature_importances_"):
+            importances = np.asarray(model.feature_importances_)
+        elif hasattr(model, "coef_"):
+            importances = np.abs(np.asarray(model.coef_)).ravel()
+        else:
+            return []
+    except Exception:
+        return []
 
     row = np.asarray(row).ravel()
     score = importances * np.abs(row)

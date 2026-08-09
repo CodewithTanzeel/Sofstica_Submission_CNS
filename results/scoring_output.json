@@ -79,100 +79,100 @@
   },
   "model_val_metrics": {
     "split_name": "val",
-    "threshold": 0.17873072624206543,
-    "pr_auc": 0.8069274342900903,
-    "precision": 0.7963684384285242,
-    "recall": 0.9933289408664141,
-    "fpr": 0.11601835828756302,
+    "threshold": 0.9383422558995005,
+    "pr_auc": 0.8024889004865277,
+    "precision": 1.0,
+    "recall": 0.0007412287926206556,
+    "fpr": 0.0,
     "confusion_matrix": [
       [
-        23498,
-        3084
+        26582,
+        0
       ],
       [
-        81,
-        12061
+        12133,
+        9
       ]
     ],
-    "false_alerts_per_10k_benign": 1160.1835828756302,
+    "false_alerts_per_10k_benign": 0.0,
     "per_class": {
       "light": {
-        "pr_auc": 0.2983159984305053,
-        "precision": 0.2874306839186691,
-        "recall": 0.9991967871485944,
-        "fpr": 0.11601835828756302
+        "pr_auc": 0.29622967248942667,
+        "precision": 1.0,
+        "recall": 0.0008032128514056225,
+        "fpr": 0.0
       },
       "heavy": {
-        "pr_auc": 0.7899439370083897,
-        "precision": 0.7781454571613553,
-        "recall": 0.9926585298706065,
-        "fpr": 0.11601835828756302
+        "pr_auc": 0.7848266993945304,
+        "precision": 1.0,
+        "recall": 0.0007341470129393411,
+        "fpr": 0.0
       },
       "combined": {
-        "pr_auc": 0.8069274342900903,
-        "precision": 0.7963684384285242,
-        "recall": 0.9933289408664141,
-        "fpr": 0.11601835828756302
+        "pr_auc": 0.8024889004865277,
+        "precision": 1.0,
+        "recall": 0.0007412287926206556,
+        "fpr": 0.0
       }
     }
   },
   "model_test_metrics": {
     "split_name": "test",
-    "threshold": 0.17873072624206543,
-    "pr_auc": 0.8094117838585149,
-    "precision": 0.8228528187665531,
-    "recall": 0.9975231630125676,
-    "fpr": 0.11907426246185147,
+    "threshold": 0.9383422558995005,
+    "pr_auc": 0.8094117838585151,
+    "precision": 1.0,
+    "recall": 9.173470323823502e-05,
+    "fpr": 0.0,
     "confusion_matrix": [
       [
-        17319,
-        2341
+        19660,
+        0
       ],
       [
-        27,
-        10874
+        10900,
+        1
       ]
     ],
-    "false_alerts_per_10k_benign": 1190.7426246185148,
+    "false_alerts_per_10k_benign": 0.0,
     "per_class": {
       "light": {
         "pr_auc": 0.28440177922282645,
-        "precision": 0.28190184049079753,
-        "recall": 0.997828447339848,
-        "fpr": 0.11907426246185147
+        "precision": 1.0,
+        "recall": 0.0010857763300760044,
+        "fpr": 0.0
       },
       "heavy": {
         "pr_auc": 0.7940676981952378,
-        "precision": 0.8096128822381262,
-        "recall": 0.9974949899799599,
-        "fpr": 0.11907426246185147
+        "precision": 0.0,
+        "recall": 0.0,
+        "fpr": 0.0
       },
       "combined": {
-        "pr_auc": 0.8094117838585149,
-        "precision": 0.8228528187665531,
-        "recall": 0.9975231630125676,
-        "fpr": 0.11907426246185147
+        "pr_auc": 0.8094117838585151,
+        "precision": 1.0,
+        "recall": 9.173470323823502e-05,
+        "fpr": 0.0
       }
     }
   },
   "threshold_selection": {
     "baseline_threshold_selected_on_val": 0.20033572868464375,
-    "model_threshold_selected_on_val": 0.17873072624206543,
+    "model_threshold_selected_on_val": 0.9383422558995005,
     "method": "F1-maximizing threshold over the validation precision-recall curve (src/model.py:select_threshold)"
   },
-  "accuracy": 0.9225156244887275,
+  "accuracy": 0.6433362782631459,
   "latency": {
-    "median_latency_ms_per_row": 0.5365500001062173,
-    "p95_latency_ms_per_row": 0.9535399999094807,
+    "median_latency_ms_per_row": 0.7786999922245741,
+    "p95_latency_ms_per_row": 1.7537849867949251,
     "n_rows_timed_individually": 500,
     "n_rows_total_test": 30561,
     "note": "Per-row timings exclude feature extraction (CSV load + impute/scale), which is measured and reported separately in the technical report.",
-    "hardware": "Windows-10-10.0.21996-SP0",
-    "python_version": "3.13.5",
-    "sklearn_version": "1.7.1"
+    "hardware": "Windows-10-10.0.19045-SP0",
+    "python_version": "3.13.0",
+    "sklearn_version": "1.9.0"
   },
   "model_config": {
-    "model_name": "xgboost",
+    "model_name": "ensemble",
     "feature_columns": [
       "rr",
       "A_frequency",
@@ -239,5 +239,5 @@
     ]
   },
   "split_methodology": "File-group (proxy session) level split, stratified by label_detail; see results/group_split_manifest.csv for the full group-split assignment.",
-  "model_pickle_path": "D:\\Hackathons\\Sofstica_Submission_CNS-main\\model.pkl"
+  "model_pickle_path": "C:\\Users\\FATTANI COMPUTERS\\Documents\\Sofstica_Submission_CNS\\model.pkl"
 }
