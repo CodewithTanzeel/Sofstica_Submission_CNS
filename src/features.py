@@ -7,7 +7,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 
-def prepare_features(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+def prepare_features(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, return_transformers: bool = False):
     """Simple feature preparation that fits on train only."""
     # sld/subdomain/timestamp are explicit domain-leakage / shortcut fields per
     # the brief (raw domain identity and capture timestamps are not valid
@@ -41,4 +41,9 @@ def prepare_features(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame)
         for index, col in enumerate(feature_columns):
             frame[f"{col}_scaled"] = matrix[:, index]
 
-    return {"train": train_processed, "val": val_processed, "test": test_processed}
+    result = {"train": train_processed, "val": val_processed, "test": test_processed}
+    if return_transformers:
+        result["imputer"] = imputer
+        result["scaler"] = scaler
+        result["feature_columns"] = feature_columns
+    return result

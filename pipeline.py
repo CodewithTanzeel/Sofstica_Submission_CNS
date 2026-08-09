@@ -10,13 +10,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import sklearn
-
+from src.model import SimpleModel, select_threshold, select_threshold_for_precision, predict_with_timing, reason_codes
 from src.baseline import BaselineRule
 from src.features import prepare_features
 from src.leakage import validate_leakage
 from src.load import load_kaggle_dataset, group_manifest
 from src.metrics import compute_metrics
-from src.model import SimpleModel, select_threshold, predict_with_timing, reason_codes
+
 
 
 ROOT = Path(__file__).resolve().parent
@@ -59,12 +59,12 @@ def run_pipeline(dataset_dir: str | None = None) -> dict:
     baseline_threshold = select_threshold(val["label"].to_numpy(), val_scores_baseline)
 
     # --- ML model: fit on train only, threshold selected on val only. ---
-    prepared = prepare_features(train, val, test)
+    prepared = prepare_features(train, val, test, return_transformers=True)
     model = SimpleModel()
     model.fit(prepared["train"], prepared["train"]["label"].to_numpy())
 
     val_model_scores = model.predict_proba(prepared["val"])
-    model_threshold = select_threshold(val["label"].to_numpy(), val_model_scores)
+    model_threshold = select_threshold_for_precision(val["label"].to_numpy(), val_model_scores, min_precision=0.98)
 
     # predict_with_timing expects a plain sklearn-style estimator taking a
     # numpy array (SimpleModel.predict_proba expects a DataFrame instead),
@@ -135,8 +135,21 @@ def run_pipeline(dataset_dir: str | None = None) -> dict:
     }
 
     # Save the trained SimpleModel for later use
+        # Save the trained SimpleModel for later use
     with open(ROOT / "model.pkl", "wb") as f:
         pickle.dump(model, f)
+
+    with open(ROOT / "results" / "inference_bundle.pkl", "wb") as f:
+        pickle.dump(
+            {
+                "model": model,
+                "imputer": prepared["imputer"],
+                "scaler": prepared["scaler"],
+                "raw_feature_columns": prepared["feature_columns"],
+                "threshold": model_threshold,
+            },
+            f,
+        )
     output_path = ROOT / "results" / "scoring_output.json"
     output_path.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
 
