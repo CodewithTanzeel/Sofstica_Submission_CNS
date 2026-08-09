@@ -160,9 +160,10 @@
     "model_threshold_selected_on_val": 0.17873072624206543,
     "method": "F1-maximizing threshold over the validation precision-recall curve (src/model.py:select_threshold)"
   },
+  "accuracy": 0.9225156244887275,
   "latency": {
-    "median_latency_ms_per_row": 0.6736000068485737,
-    "p95_latency_ms_per_row": 0.7961950075696221,
+    "median_latency_ms_per_row": 0.5365500001062173,
+    "p95_latency_ms_per_row": 0.9535399999094807,
     "n_rows_timed_individually": 500,
     "n_rows_total_test": 30561,
     "note": "Per-row timings exclude feature extraction (CSV load + impute/scale), which is measured and reported separately in the technical report.",
@@ -237,5 +238,6 @@
       "len_scaled"
     ]
   },
-  "split_methodology": "File-group (proxy session) level split, stratified by label_detail; see results/group_split_manifest.csv for the full group->split assignment."
+  "split_methodology": "File-group (proxy session) level split, stratified by label_detail; see results/group_split_manifest.csv for the full group-split assignment.",
+  "model_pickle_path": "D:\\Hackathons\\Sofstica_Submission_CNS-main\\model.pkl"
 }

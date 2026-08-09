@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import pickle
+from sklearn.metrics import accuracy_score
 import json
 import platform
 from pathlib import Path
@@ -110,6 +112,7 @@ def run_pipeline(dataset_dir: str | None = None) -> dict:
             "model_threshold_selected_on_val": model_threshold,
             "method": "F1-maximizing threshold over the validation precision-recall curve (src/model.py:select_threshold)",
         },
+        "accuracy": accuracy_score(test["label"].to_numpy(), test_pred),
         "latency": {
             "median_latency_ms_per_row": timed.median_latency_ms,
             "p95_latency_ms_per_row": timed.p95_latency_ms,
@@ -126,10 +129,14 @@ def run_pipeline(dataset_dir: str | None = None) -> dict:
         },
         "split_methodology": (
             "File-group (proxy session) level split, stratified by label_detail; "
-            "see results/group_split_manifest.csv for the full group->split assignment."
+            "see results/group_split_manifest.csv for the full group-split assignment."
         ),
+        "model_pickle_path": str(ROOT / "model.pkl"),
     }
 
+    # Save the trained SimpleModel for later use
+    with open(ROOT / "model.pkl", "wb") as f:
+        pickle.dump(model, f)
     output_path = ROOT / "results" / "scoring_output.json"
     output_path.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
 
